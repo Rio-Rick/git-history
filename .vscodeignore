@@ -1,0 +1,12 @@
+.vscode/**
+node_modules/**
+webview/**
+test/**
+**/*.test.js
+vite.config.mjs
+vitest.config.mjs
+.prettierrc
+.prettierignore
+.gitignore
+package-lock.json
+*.vsix

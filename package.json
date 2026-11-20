@@ -1,0 +1,87 @@
+{
+  "name": "git-file-history-nav",
+  "displayName": "Git File History (Change Navigation & Search)",
+  "description": "Browse the history of a file with next/previous change buttons, auto-jump to the changes, change markers and in-file search. Based on pomber/git-history.",
+  "version": "2.0.0",
+  "publisher": "local",
+  "license": "MIT",
+  "private": true,
+  "icon": "images/icon.png",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=20.19"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "history",
+    "file history",
+    "diff",
+    "timeline"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pomber/git-history"
+  },
+  "main": "./extension/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitFileHistoryNav.open",
+        "title": "Git File History (Nav & Search)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "gitFileHistoryNav.open",
+          "group": "navigation@100"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "gitFileHistoryNav.open",
+          "when": "!explorerResourceIsFolder",
+          "group": "navigation@100"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "check-format": "prettier --check .",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@vitejs/plugin-react": "^6.3.0",
+    "@vscode/vsce": "^4.1.1",
+    "diff": "^9.0.0",
+    "jsdom": "^31.0.1",
+    "prettier": "^3.10.1",
+    "prismjs": "^1.30.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-swipeable": "^7.0.2",
+    "rebound": "^0.1.0",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Reading the history runs git in the folder of the file, and a repository that is not trusted can make git run programs."
+    }
+  }
+}
