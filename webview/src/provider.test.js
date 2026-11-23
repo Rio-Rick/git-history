@@ -11,6 +11,8 @@ describe("provider (the webview side of the extension)", () => {
     });
   });
 
+  afterEach(() => provider.dispose());
+
   const reply = data =>
     window.dispatchEvent(new MessageEvent("message", { data }));
   const commit = (hash, content) => ({
@@ -67,6 +69,34 @@ describe("provider (the webview side of the extension)", () => {
     reply({ id: 999, commits: [] });
     reply({ id: posted[0].id, commits: [commit("a", "one\n")] });
     expect((await promise).length).toBe(1);
+  });
+
+  test("rejects a malformed history response", async () => {
+    const promise = provider.getVersions(10);
+    await tick();
+    reply({ id: posted[0].id, commits: null });
+    await expect(promise).rejects.toThrow(/Invalid history response/);
+  });
+
+  test("cleans up its message listener and pending requests on dispose", async () => {
+    const promise = provider.getVersions(10);
+    await tick();
+    provider.dispose();
+    await expect(promise).rejects.toThrow(/panel was closed/);
+    reply({ id: posted[0].id, commits: [commit("a", "one\n")] });
+    expect(posted.length).toBe(1);
+  });
+
+  test("rejects when VS Code no longer accepts a webview message", async () => {
+    const unavailable = createProvider({
+      vscode: { postMessage: () => Promise.resolve(false) },
+      path: "/repo/file.js"
+    });
+
+    await expect(unavailable.getVersions(10)).rejects.toThrow(
+      /history panel is no longer available/
+    );
+    unavailable.dispose();
   });
 
   test("passes on the error message of the extension", async () => {

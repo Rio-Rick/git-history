@@ -44,7 +44,12 @@ const Row = React.memo(function Row({
   return (
     <div
       style={Object.assign(
-        { overflow: "hidden", height: ROW_HEIGHT + "px" },
+        {
+          overflow: "hidden",
+          height: ROW_HEIGHT + "px",
+          width: "max-content",
+          minWidth: "100%"
+        },
         style
       )}
     >

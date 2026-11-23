@@ -3,9 +3,10 @@ import History from "./history.jsx";
 
 export default function App({ provider }) {
   const { path } = provider;
+  useEffect(() => () => provider.dispose?.(), [provider]);
   const [versions, loading, error, loadMore] = useVersionsLoader(provider);
 
-  if (error) {
+  if (error && !versions) {
     return <ErrorMessage error={error} />;
   }
 
@@ -27,7 +28,32 @@ export default function App({ provider }) {
     );
   }
 
-  return <History versions={versions} loadMore={loadMore} />;
+  return (
+    <>
+      {error && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            top: "108px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 4,
+            maxWidth: "min(90vw, 720px)",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            background: "rgb(90, 35, 35)",
+            color: "rgb(255, 230, 230)"
+          }}
+        >
+          {error.friendly
+            ? error.message
+            : "Could not load more history. Check the console."}
+        </div>
+      )}
+      <History versions={versions} loadMore={loadMore} />
+    </>
+  );
 }
 
 function Center({ children }) {
@@ -96,10 +122,13 @@ function useVersionsLoader(provider) {
       })
       .catch(error => {
         if (cancelled) return;
+        if (!error?.friendly && state.data) {
+          console.error("Could not load more file history:", error);
+        }
         setState(old => ({
           ...old,
           loading: false,
-          error: error.friendly ? error : error.message || String(error)
+          error: error?.friendly ? error : error?.message || String(error)
         }));
       });
     return () => {

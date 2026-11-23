@@ -9,6 +9,7 @@ import {
   computeOffsets,
   lowerBound,
   getScrollTopFromOffsets,
+  clampScrollTop,
   isTyping
 } from "./utils";
 
@@ -35,9 +36,12 @@ export default function Scroller({
 }) {
   const ref = React.useRef();
   const height = useHeight(ref);
+  const containerHeight =
+    height ?? ref.current?.clientHeight ?? window.innerHeight;
 
   // Only changes when the heights change (while the animation runs)
   const offsets = React.useMemo(() => computeOffsets(heights), [heights]);
+  const contentHeight = offsets[offsets.length - 1] || 0;
 
   const reducer = (prevState, action) => {
     switch (action.type) {
@@ -58,7 +62,7 @@ export default function Scroller({
             prevState.targetTop,
             snapAreas,
             offsets,
-            height
+            containerHeight
           );
 
           newIndex = changeIndex(snapAreas, oldIndex);
@@ -79,7 +83,7 @@ export default function Scroller({
           targetTop: getScrollTopFromOffsets(
             snapAreas[newIndex],
             offsets,
-            height
+            containerHeight
           )
         };
       }
@@ -92,7 +96,7 @@ export default function Scroller({
           targetTop: getScrollTopFromOffsets(
             { start: action.row, end: action.row },
             offsets,
-            height
+            containerHeight
           )
         };
       case "manual-scroll": {
@@ -115,16 +119,27 @@ export default function Scroller({
   const [{ snap, targetTop, currentTop, areaIndex, areaKnown }, dispatch] =
     React.useReducer(reducer, initialState);
 
+  // A version can be much shorter than the one shown before it. Clamp both
+  // ends of the spring so stale scroll positions cannot virtualize past EOF.
+  const safeTargetTop = clampScrollTop(
+    targetTop,
+    contentHeight,
+    containerHeight
+  );
+  const safeCurrentTop =
+    currentTop == null
+      ? null
+      : clampScrollTop(currentTop, contentHeight, containerHeight);
   const top = useSpring({
-    target: targetTop,
-    current: currentTop,
+    target: safeTargetTop,
+    current: safeCurrentTop,
     round: Math.round
   });
   // console.log("render", targetTop, top);
 
   const children = useChildren({
     height,
-    top,
+    top: clampScrollTop(top, contentHeight, containerHeight),
     items,
     offsets,
     renderRow
@@ -212,7 +227,7 @@ export default function Scroller({
         style={{
           height: "100%",
           overflowY: "auto",
-          overflowX: "hidden"
+          overflowX: "auto"
         }}
         className="scroller"
         ref={ref}
@@ -367,19 +382,33 @@ function getAreaIndex(scrollTop, areas, offsets, containerHeight) {
 }
 
 function useHeight(ref) {
-  let [height, setHeight] = React.useState(null);
-
-  function handleResize() {
-    setHeight(ref.current.clientHeight);
-  }
+  const [height, setHeight] = React.useState(null);
 
   React.useEffect(() => {
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
+    const element = ref.current;
+    if (!element) return undefined;
+
+    const updateHeight = () => {
+      const nextHeight = element.clientHeight;
+      setHeight(previous =>
+        previous === nextHeight ? previous : nextHeight
+      );
     };
-  }, []);
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateHeight)
+        : null;
+    observer?.observe(element);
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      observer?.disconnect();
+    };
+  }, [ref]);
 
   return height;
 }

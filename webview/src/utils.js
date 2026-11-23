@@ -44,19 +44,26 @@ export function upperBound(offsets, value) {
   return lo;
 }
 
+export function clampScrollTop(top, contentHeight, containerHeight) {
+  const viewportHeight = Math.max(0, Number(containerHeight) || 0);
+  const maxTop = Math.max(
+    0,
+    (Number(contentHeight) || 0) - viewportHeight
+  );
+  const requestedTop = Number(top);
+  const safeTop = Number.isFinite(requestedTop) ? requestedTop : 0;
+  return Math.min(maxTop, Math.max(0, safeTop));
+}
+
 export function getScrollTopFromOffsets(area, offsets, containerHeight) {
   const start = offsets[area.start];
   const end = offsets[area.end + 1];
   const contentHeight = offsets[offsets.length - 1];
+  const viewportHeight = Math.max(0, Number(containerHeight) || 0);
   const middle = (end + start) / 2;
-  const halfContainer = containerHeight / 2;
   const bestTop =
-    end - start > containerHeight ? start : middle - halfContainer;
-  if (bestTop < 0) return 0;
-  if (bestTop + containerHeight > contentHeight) {
-    return contentHeight - containerHeight;
-  }
-  return bestTop;
+    end - start > viewportHeight ? start : middle - viewportHeight / 2;
+  return clampScrollTop(bestTop, contentHeight, viewportHeight);
 }
 
 export function getScrollTop(area, contentHeight, containerHeight, heights) {

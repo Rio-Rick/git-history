@@ -45,7 +45,13 @@ function activate(context) {
         }
       );
       panels.set(filePath, panel);
-      panel.onDidDispose(() => panels.delete(filePath));
+      let messageListener;
+      panel.onDidDispose(() => {
+        if (panels.get(filePath) === panel) {
+          panels.delete(filePath);
+        }
+        messageListener?.dispose();
+      });
 
       const { webview } = panel;
       const asset = name =>
@@ -61,9 +67,16 @@ function activate(context) {
         data: { path: filePath }
       });
 
-      webview.onDidReceiveMessage(
+      messageListener = webview.onDidReceiveMessage(
         message => {
-          if (!message || message.command !== "commits") return;
+          if (
+            !message ||
+            message.command !== "commits" ||
+            !Number.isSafeInteger(message.id) ||
+            message.id < 1
+          ) {
+            return;
+          }
           const { id } = message;
           const { last = 15, before = null, known = [] } = message.params || {};
           // always the file of this panel, whatever the page asks for
@@ -80,9 +93,7 @@ function activate(context) {
                       .trim()}`
               });
             });
-        },
-        undefined,
-        context.subscriptions
+        }
       );
     }
   );

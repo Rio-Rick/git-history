@@ -184,6 +184,6 @@ function Slides({ versions, loadMore }) {
 
 function useSliderSpring(initial) {
   const [target, setTarget] = useState(initial);
-  const value = useSpring({ target, tension: 0, friction: 10 });
+  const value = useSpring({ target, tension: 40, friction: 10 });
   return [Math.round(value * 100) / 100, target, setTarget];
 }

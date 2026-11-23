@@ -9,7 +9,8 @@ import {
   lowerBound,
   upperBound,
   getScrollTop,
-  getScrollTopFromOffsets
+  getScrollTopFromOffsets,
+  clampScrollTop
 } from "./utils";
 
 function seeded(seed) {
@@ -81,7 +82,7 @@ describe("offsets", () => {
     expect(upperBound(offsets, 1000)).toBe(8);
   });
 
-  test("getScrollTop did not change its result", () => {
+  test("scroll positions stay inside the valid content range", () => {
     const area = { start: 2, end: 3 };
     // the old implementation, for reference
     const sum = a => a.reduce((x, y) => x + y, 0);
@@ -90,9 +91,10 @@ describe("offsets", () => {
       const end = start + sum(hs.slice(area.start, area.end + 1));
       const middle = (end + start) / 2;
       const best = end - start > container ? start : middle - container / 2;
-      if (best < 0) return 0;
-      if (best + container > content) return content - container;
-      return best;
+      return Math.min(
+        Math.max(0, content - container),
+        Math.max(0, best)
+      );
     };
     [10, 20, 40, 100].forEach(container => {
       [
@@ -109,6 +111,13 @@ describe("offsets", () => {
         );
       });
     });
+
+    expect(
+      getScrollTopFromOffsets({ start: 0, end: 0 }, offsets, 100)
+    ).toBe(0);
+    expect(clampScrollTop(2500, 120, 600)).toBe(0);
+    expect(clampScrollTop(2500, 1200, 600)).toBe(600);
+    expect(clampScrollTop(-20, 1200, 600)).toBe(0);
   });
 });
 

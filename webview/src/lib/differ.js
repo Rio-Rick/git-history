@@ -112,7 +112,11 @@ function buildSlide(lines, slideIndex, allTokens) {
 // new ones are older, so they go at the end). Instead of diffing and
 // tokenizing the whole history every time we keep what we already computed
 // and only process the new commits.
-let cache = null;
+const defaultSlidesCache = { current: null };
+
+export function createSlidesCache() {
+  return { current: null };
+}
 
 function startsWith(codes, prefix) {
   if (prefix.length > codes.length) return false;
@@ -122,14 +126,19 @@ function startsWith(codes, prefix) {
   return true;
 }
 
-export function resetSlidesCache() {
-  cache = null;
+export function resetSlidesCache(slidesCache = defaultSlidesCache) {
+  slidesCache.current = null;
 }
 
 // Returns a function that processes one more commit each time it is called
 // and returns true when there is nothing left to do. It lets callers yield
 // to the UI between commits.
-export function createSlidesBuilder(codes, language) {
+export function createSlidesBuilder(
+  codes,
+  language,
+  slidesCache = defaultSlidesCache
+) {
+  let cache = slidesCache.current;
   if (
     !cache ||
     cache.language !== language ||
@@ -142,34 +151,47 @@ export function createSlidesBuilder(codes, language) {
       slides: [],
       tokenState: { tokenLines: null, allTokens: [] }
     };
+    slidesCache.current = cache;
   }
   const c = cache;
   const done = c.codes.length;
   let next = done;
-  return {
-    step() {
-      if (next < codes.length) {
-        slideDiff(c.lines, codes, next, language, c.tokenState);
-        next++;
+  function step() {
+    if (next < codes.length) {
+      const slideIndex = next;
+      slideDiff(c.lines, codes, slideIndex, language, c.tokenState);
+      next++;
+
+      // A slide needs its newer and older neighbours' token lines. Once the
+      // next commit is processed, the previous slide can be finalized.
+      if (slideIndex > 0) {
+        c.slides[slideIndex - 1] = buildSlide(
+          c.lines,
+          slideIndex - 1,
+          c.tokenState.allTokens
+        );
       }
-      return next >= codes.length;
-    },
-    finish() {
-      while (next < codes.length) {
-        slideDiff(c.lines, codes, next, language, c.tokenState);
-        next++;
+
+      // The oldest slide has no older neighbour, so it can be finalized last.
+      if (next === codes.length && codes.length > 0) {
+        c.slides[codes.length - 1] = buildSlide(
+          c.lines,
+          codes.length - 1,
+          c.tokenState.allTokens
+        );
       }
-      c.codes = codes.slice();
-      // Only the last slide we already had (its `left` neighbour is new)
-      // and the new ones need to be built, the rest stays the same.
-      const rebuildFrom = Math.max(0, done - 1);
-      c.slides.length = rebuildFrom;
-      for (let i = rebuildFrom; i < codes.length; i++) {
-        c.slides.push(buildSlide(c.lines, i, c.tokenState.allTokens));
-      }
-      return c.slides.slice();
     }
-  };
+    return next >= codes.length;
+  }
+
+  function finish() {
+    while (next < codes.length) step();
+    c.codes = codes.slice();
+    c.slides.length = codes.length;
+    return c.slides.slice();
+  }
+
+  return { step, finish };
 }
 
 export function getSlides(codes, language) {

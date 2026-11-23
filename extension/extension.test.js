@@ -6,7 +6,12 @@ const { execSync } = require("node:child_process");
 
 // A VS Code that is just enough for the extension
 function fakeVscode() {
-  const state = { command: null, panels: [], infos: [] };
+  const state = {
+    command: null,
+    panels: [],
+    infos: [],
+    disposedMessageListeners: 0
+  };
   const vscode = {
     Uri: { file: p => ({ fsPath: p, toString: () => `file://${p}` }) },
     ViewColumn: { One: 1 },
@@ -33,6 +38,11 @@ function fakeVscode() {
             html: "",
             onDidReceiveMessage(handler) {
               panel.messageHandler = handler;
+              return {
+                dispose() {
+                  state.disposedMessageListeners++;
+                }
+              };
             },
             postMessage(message) {
               panel.posted.push(message);
@@ -139,9 +149,10 @@ describe("extension", () => {
     expect(env.state.panels[0].revealed).toBe(1);
   });
 
-  test("a closed panel can be opened again", () => {
+  test("a closed panel releases its message listener and can be reopened", () => {
     run({ fsPath: file });
     env.state.panels[0].disposeHandler();
+    expect(env.state.disposedMessageListeners).toBe(1);
     run({ fsPath: file });
     expect(env.state.panels.length).toBe(2);
   });

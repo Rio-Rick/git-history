@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 export default function useSpring({
   target = 0,
   current = null,
-  tension = 0,
+  tension = 40,
   friction = 10,
   round = x => x
 }) {
@@ -41,7 +41,7 @@ export default function useSpring({
         spring.setCurrentValue(current);
       }
     }
-  }, [target, current]);
+  }, [spring, target, current]);
 
   return value;
 }

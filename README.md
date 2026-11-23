@@ -38,7 +38,7 @@ Files whose language is not known are shown as plain text.
 
 ## Build it
 
-You need Node.js 20.19 or newer (or 22.12+) and git.
+The extension runtime remains compatible with Node.js 20.19+. For local development and tests with the current locked dependencies (including jsdom 31), use Node.js 22.22.2+ in the 22.x line, 24.15+ in the 24.x line, or 26+, plus git.
 
 ```bash
 npm install
@@ -49,7 +49,7 @@ npm run package     # creates git-file-history-nav-<version>.vsix
 Then, in VS Code: Extensions → `⋯` → **Install from VSIX…**, or
 
 ```bash
-code --install-extension git-file-history-nav-2.0.0.vsix
+code --install-extension git-file-history-nav-2.0.1.vsix
 ```
 
 To try it without installing: open this folder in VS Code and press **F5**.

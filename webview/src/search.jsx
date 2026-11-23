@@ -24,16 +24,18 @@ export function findRanges(text, query, matchCase = false) {
 // Indexes (in `lines`) of the lines of the current version that contain query
 export function findMatches(lines, query, matchCase = false) {
   if (!query) return [];
+
+  const needle = matchCase ? query : query.toLowerCase();
   const matches = [];
+
   lines.forEach((line, i) => {
-    if (
-      line.middle &&
-      line.tokens &&
-      findRanges(lineText(line), query, matchCase).length
-    ) {
-      matches.push(i);
-    }
+    if (!line.middle || !line.tokens?.length) return;
+
+    const text = lineText(line);
+    const haystack = matchCase ? text : text.toLowerCase();
+    if (haystack.includes(needle)) matches.push(i);
   });
+
   return matches;
 }
 
@@ -111,8 +113,7 @@ export function useSearch(lines) {
       setCursor(0);
       scrollTo(matches[0]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, matchCase]);
+  }, [query, matchCase, matches]);
 
   const openSearch = () => {
     setOpen(true);

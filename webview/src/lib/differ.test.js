@@ -1,5 +1,11 @@
 import { diffLines } from "diff";
-import { getSlides, getChanges, resetSlidesCache } from "./differ";
+import {
+  getSlides,
+  getChanges,
+  resetSlidesCache,
+  createSlidesBuilder,
+  createSlidesCache
+} from "./differ";
 
 // ---- The original (slow) implementation, kept as a reference ----
 const newlineRe = /\r\n|\r|\n/;
@@ -104,6 +110,47 @@ describe("getSlides", () => {
         expect(new Set(keys).size).toBe(keys.length);
       });
     });
+  });
+
+  test("can be processed one commit at a time", () => {
+    const codes = makeHistory(12, 17);
+    const builder = createSlidesBuilder(codes, "javascript");
+    let steps = 0;
+    let done = false;
+    while (!done) {
+      done = builder.step();
+      steps++;
+    }
+
+    expect(steps).toBe(codes.length);
+    expect(simple(builder.finish())).toEqual(refSlides(codes));
+  });
+
+  test("independent builders do not share mutable cache state", () => {
+    const codes = makeHistory(21, 12);
+    const cacheA = createSlidesCache();
+    const cacheB = createSlidesCache();
+    const builderA = createSlidesBuilder(codes, "javascript", cacheA);
+    const builderB = createSlidesBuilder(codes, "javascript", cacheB);
+    let doneA = false;
+    let doneB = false;
+
+    while (!doneA || !doneB) {
+      if (!doneA) doneA = builderA.step();
+      if (!doneB) doneB = builderB.step();
+    }
+
+    expect(simple(builderA.finish())).toEqual(refSlides(codes));
+    expect(simple(builderB.finish())).toEqual(refSlides(codes));
+  });
+
+  test("continues incrementally after a previous page was built", () => {
+    const codes = makeHistory(13, 18);
+    getSlides(codes.slice(0, 7), "javascript");
+    const builder = createSlidesBuilder(codes, "javascript");
+    let done = false;
+    while (!done) done = builder.step();
+    expect(simple(builder.finish())).toEqual(refSlides(codes));
   });
 
   test("keeps the slides it already built (same identity)", () => {

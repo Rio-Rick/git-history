@@ -196,6 +196,17 @@ describe("help and line numbers", () => {
       "6"
     ]);
   });
+
+  test("long lines keep their full intrinsic width and can scroll horizontally", () => {
+    const longLine = `const value = "${"x".repeat(1200)}";`;
+    show(makeVersion([longLine], []));
+
+    const row = $(".line-no").parentElement;
+    expect(row.style.width).toBe("max-content");
+    expect(row.style.minWidth).toBe("100%");
+    expect(row.textContent).toContain(longLine);
+    expect($(".scroller").style.overflowX).toBe("auto");
+  });
 });
 
 describe("big files", () => {
