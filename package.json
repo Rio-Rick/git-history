@@ -2,7 +2,7 @@
   "name": "git-file-history-nav",
   "displayName": "Git File History (Change Navigation & Search)",
   "description": "Browse the history of a file with next/previous change buttons, auto-jump to the changes, change markers and in-file search. Based on pomber/git-history.",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "publisher": "local",
   "license": "MIT",
   "private": true,

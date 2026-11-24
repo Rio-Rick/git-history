@@ -4,7 +4,8 @@ import {
   getChanges,
   resetSlidesCache,
   createSlidesBuilder,
-  createSlidesCache
+  createSlidesCache,
+  addRemovedHeaders
 } from "./differ";
 
 // ---- The original (slow) implementation, kept as a reference ----
@@ -183,5 +184,148 @@ describe("getChanges", () => {
   test("is cached per slide", () => {
     const slide = getSlides(makeHistory(4, 5), "javascript")[0];
     expect(getChanges(slide)).toBe(getChanges(slide));
+  });
+});
+
+describe("removed lines are changes too", () => {
+  // newest first, like the app asks for them
+  const slidesOf = (...codes) => getSlides(codes, "javascript");
+  const changesOf = (...codes) => getChanges(slidesOf(...codes)[0]);
+
+  test("a commit that only deletes lines has a change (kind removed)", () => {
+    const changes = changesOf("a\nb\nd\n", "a\nb\nc\nd\n");
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ kind: "removed", added: 0, removed: 1 });
+  });
+
+  test("a commit that only adds lines is still an added change", () => {
+    const changes = changesOf("a\nb\nc\n", "a\nc\n");
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ kind: "added", added: 1, removed: 0 });
+  });
+
+  test("a replaced block is one modified change", () => {
+    const changes = changesOf("a\nX\nY\nZ\nd\n", "a\nb\nc\nd\n");
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      kind: "modified",
+      added: 3,
+      removed: 2
+    });
+  });
+
+  test("separate deletions are separate changes", () => {
+    const changes = changesOf("a\nc\ne\n", "a\nb\nc\nd\ne\n");
+    expect(changes.map(c => c.kind)).toEqual(["removed", "removed"]);
+  });
+
+  test("deleting the file removes every line", () => {
+    const slide = slidesOf("", "a\nb\nc\n")[0];
+    expect(slide.some(l => l.middle)).toBe(false);
+    const changes = getChanges(slide);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ kind: "removed", removed: 3 });
+  });
+
+  test("the first version has nothing removed", () => {
+    const slides = slidesOf("a\nb\n");
+    expect(getChanges(slides[0])).toEqual([
+      expect.objectContaining({ kind: "added", added: 2, removed: 0 })
+    ]);
+  });
+
+  [1, 2, 3, 4, 5].forEach(seed => {
+    test(`the counts match the lines of every version (seed ${seed})`, () => {
+      const slides = getSlides(makeHistory(seed, 14), "javascript");
+      slides.forEach(slide => {
+        const changes = getChanges(slide);
+        const added = slide.filter(l => !l.left && l.middle).length;
+        const removed = slide.filter(l => l.left && !l.middle).length;
+        expect(changes.reduce((n, c) => n + c.added, 0)).toBe(added);
+        expect(changes.reduce((n, c) => n + c.removed, 0)).toBe(removed);
+        // changes do not overlap and are in order
+        changes.forEach((c, i) => {
+          expect(c.start).toBeLessThanOrEqual(c.end);
+          if (i > 0) expect(c.start).toBeGreaterThan(changes[i - 1].end);
+        });
+      });
+    });
+  });
+});
+
+describe("addRemovedHeaders", () => {
+  const slideOf = (...codes) => getSlides(codes, "javascript")[0];
+
+  test("gives the same lines and changes when nothing was removed", () => {
+    const slide = slideOf("a\nb\nc\n", "a\nc\n");
+    const changes = getChanges(slide);
+    const view = addRemovedHeaders(slide, changes);
+    expect(view.lines).toBe(slide);
+    expect(view.changes).toBe(changes);
+    expect(view.headers).toEqual([]);
+  });
+
+  test("puts a header in front of the removed lines", () => {
+    const slide = slideOf("a\nb\nd\ne\n", "a\nb\nc\nc2\nd\ne\n");
+    const view = addRemovedHeaders(slide, getChanges(slide));
+    expect(view.lines).toHaveLength(slide.length + 1);
+    expect(view.headers).toHaveLength(1);
+
+    const [change] = view.changes;
+    const header = view.lines[change.header];
+    expect(header).toMatchObject({ removedHeader: true, count: 2 });
+    expect(header.middle).toBe(false);
+    // the header is the first row of the change, the removed rows follow it
+    expect(change.start).toBe(change.header);
+    expect(view.lines[change.header + 1]).toMatchObject({
+      content: "c",
+      left: true,
+      middle: false
+    });
+    expect(view.lines[change.end]).toMatchObject({ content: "c2" });
+  });
+
+  test("a modified change has the header before the removed lines and the added ones after", () => {
+    const slide = slideOf("a\nX\nd\n", "a\nb\nc\nd\n");
+    const view = addRemovedHeaders(slide, getChanges(slide));
+    const [change] = view.changes;
+    const rows = view.lines.slice(change.start, change.end + 1);
+    expect(rows.map(r => r.content)).toEqual(["", "b", "c", "X"]);
+    expect(rows[0].removedHeader).toBe(true);
+  });
+
+  test("moves the next changes by the headers that are before them", () => {
+    // removes "b" and "d", adds "f"
+    const slide = slideOf("a\nc\ne\nf\n", "a\nb\nc\nd\ne\n");
+    const changes = getChanges(slide);
+    const view = addRemovedHeaders(slide, changes);
+    expect(changes.map(c => c.kind)).toEqual(["removed", "removed", "added"]);
+    expect(view.headers).toHaveLength(2);
+    expect(view.lines).toHaveLength(slide.length + 2);
+
+    view.changes.forEach((change, i) => {
+      const original = changes[i];
+      const rows = view.lines.slice(change.start, change.end + 1);
+      expect(rows.filter(r => r.removedHeader)).toHaveLength(
+        original.removed ? 1 : 0
+      );
+      expect(rows.length).toBe(
+        original.end - original.start + 1 + (original.removed ? 1 : 0)
+      );
+    });
+    expect(view.changes[2].header).toBe(-1);
+    // every header sits right before its first removed line
+    view.headers.forEach(h => {
+      expect(view.lines[h + 1].left && !view.lines[h + 1].middle).toBe(true);
+    });
+  });
+
+  test("the headers have unique keys", () => {
+    const slides = getSlides(makeHistory(3, 14), "javascript");
+    slides.forEach(slide => {
+      const view = addRemovedHeaders(slide, getChanges(slide));
+      const keys = view.lines.map(l => l.key);
+      expect(new Set(keys).size).toBe(keys.length);
+    });
   });
 });

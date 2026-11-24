@@ -32,7 +32,10 @@ export default function Scroller({
   onOpenSearch,
   onOpenHelp,
   autoJump,
-  onToggleAutoJump
+  onToggleAutoJump,
+  stats,
+  showRemoved,
+  onToggleShowRemoved
 }) {
   const ref = React.useRef();
   const height = useHeight(ref);
@@ -217,6 +220,9 @@ export default function Scroller({
         onOpenHelp={onOpenHelp}
         autoJump={autoJump}
         onToggleAutoJump={onToggleAutoJump}
+        stats={stats}
+        showRemoved={showRemoved}
+        onToggleShowRemoved={onToggleShowRemoved}
       />
       <Markers
         markers={markers}
@@ -264,7 +270,10 @@ const ChangeNav = React.memo(function ChangeNav({
   onOpenSearch,
   onOpenHelp,
   autoJump,
-  onToggleAutoJump
+  onToggleAutoJump,
+  stats,
+  showRemoved,
+  onToggleShowRemoved
 }) {
   const label = total ? `${index == null ? "–" : index + 1} / ${total}` : "";
   return (
@@ -288,6 +297,17 @@ const ChangeNav = React.memo(function ChangeNav({
       >
         ▼
       </button>
+      {stats && (stats.added > 0 || stats.removed > 0) && (
+        <span
+          className="change-nav-stats"
+          title="Lines added and removed by this commit"
+        >
+          {stats.added > 0 && <span className="stat-add">+{stats.added}</span>}
+          {stats.removed > 0 && (
+            <span className="stat-del">−{stats.removed}</span>
+          )}
+        </span>
+      )}
       {onToggleAutoJump && (
         <button
           className={"change-nav-extra" + (autoJump ? " on" : "")}
@@ -300,6 +320,20 @@ const ChangeNav = React.memo(function ChangeNav({
           onClick={onToggleAutoJump}
         >
           Auto-jump
+        </button>
+      )}
+      {onToggleShowRemoved && stats && stats.removed > 0 && (
+        <button
+          className={"change-nav-extra" + (showRemoved ? " on" : "")}
+          title={
+            showRemoved
+              ? "Removed lines are shown: click to hide them"
+              : "Show the lines this commit removed"
+          }
+          aria-pressed={!!showRemoved}
+          onClick={onToggleShowRemoved}
+        >
+          Removed
         </button>
       )}
       {onOpenSearch && (
@@ -340,9 +374,13 @@ const Markers = React.memo(function Markers({
       {markers.changes.map((c, i) => (
         <div
           key={"c" + i}
-          className={"marker-change" + (i === activeChange ? " active" : "")}
+          className={
+            "marker-change marker-" +
+            c.kind +
+            (i === activeChange ? " active" : "")
+          }
           style={{ top: `${c.top * 100}%`, height: `${c.height * 100}%` }}
-          title={`Change ${i + 1}`}
+          title={describeChange(i, c)}
           onClick={() => onSelectChange(i)}
         />
       ))}
@@ -356,6 +394,13 @@ const Markers = React.memo(function Markers({
     </div>
   );
 });
+
+function describeChange(index, change) {
+  const parts = [];
+  if (change.added) parts.push(`+${change.added}`);
+  if (change.removed) parts.push(`−${change.removed}`);
+  return `Change ${index + 1}${parts.length ? ` (${parts.join(" ")})` : ""}`;
+}
 
 function getAreaIndex(scrollTop, areas, offsets, containerHeight) {
   if (areas.length === 0) {
@@ -390,9 +435,7 @@ function useHeight(ref) {
 
     const updateHeight = () => {
       const nextHeight = element.clientHeight;
-      setHeight(previous =>
-        previous === nextHeight ? previous : nextHeight
-      );
+      setHeight(previous => (previous === nextHeight ? previous : nextHeight));
     };
 
     updateHeight();

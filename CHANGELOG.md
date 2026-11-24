@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.1.0
+
+- Removed lines are now part of the change navigation. A commit that only
+  deletes lines has changes (before, it said "No changes" and the lines just
+  disappeared), so the previous / next buttons, the counter and auto-jump work
+  for it too.
+- A red "N lines removed" row shows where lines were deleted. Click it to see
+  the old lines (red, struck through, not numbered); the new Removed button
+  opens all of them and remembers the choice. Inside a replaced block the old
+  lines come first and the new ones after them.
+- When a commit deletes the whole file (or empties it) its old content is
+  shown instead of a blank page.
+- The strip next to the scrollbar has colours: green added, blue replaced,
+  red removed. The navigator shows `+added −removed` for the commit.
+
 ## 2.0.0
 
 - New project that is only the VS Code extension, built with the latest tools:

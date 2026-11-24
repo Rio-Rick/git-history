@@ -1,0 +1,47 @@
+/* Lines removed by a version (shown on demand) */
+.removed-line {
+  background: rgba(239, 83, 80, 0.14);
+  text-decoration: line-through;
+  text-decoration-color: rgba(239, 83, 80, 0.55);
+}
+
+.removed-line .line-no {
+  color: rgb(239, 83, 80);
+}
+
+.removed-header {
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.75rem;
+  line-height: 15px;
+  color: rgb(239, 83, 80);
+  background: rgba(239, 83, 80, 0.08);
+  border-top: 1px solid rgba(239, 83, 80, 0.35);
+}
+
+.removed-toggle {
+  display: inline-flex;
+  align-items: center;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 15px;
+  cursor: pointer;
+}
+
+.removed-toggle:hover {
+  text-decoration: underline;
+}
+
+.removed-caret {
+  display: inline-block;
+  width: 1.4ch;
+  margin-right: 0.6ch;
+  text-align: center;
+}

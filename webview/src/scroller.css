@@ -60,6 +60,14 @@
   cursor: pointer;
 }
 
+.marker-change.marker-removed {
+  background: rgb(239, 83, 80);
+}
+
+.marker-change.marker-modified {
+  background: rgb(130, 170, 255);
+}
+
 .marker-change:hover,
 .marker-change.active {
   opacity: 1;
@@ -99,4 +107,21 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 0.75rem;
   pointer-events: none;
+}
+
+.change-nav-stats {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 6px;
+  padding: 0 8px;
+  border-left: 1px solid rgba(214, 222, 235, 0.25);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-add {
+  color: rgb(173, 219, 103);
+}
+
+.stat-del {
+  color: rgb(239, 83, 80);
 }

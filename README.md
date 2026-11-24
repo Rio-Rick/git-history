@@ -8,7 +8,8 @@ rebuilt as a small extension of its own and with these additions:
 
 - **Previous / next change** buttons (or `↑` / `↓`) with a "Change 2 / 5" counter.
 - **Auto-jump**: when you switch commit it scrolls to the closest change, so you do not have to look for what changed. It can be turned off.
-- **Change markers** next to the scrollbar. Click one to jump to that change.
+- **Change markers** next to the scrollbar: green for added lines, blue for replaced ones and red for removed ones. Click one to jump to that change.
+- **Removed lines are not lost.** A commit that only deletes lines is a change you can jump to, a red "3 lines removed" row shows where they were, and one click shows them (struck through, in red). The navigator also shows `+added −removed` for the commit. If a commit deletes the whole file, its content is shown instead of an empty page.
 - **Search in the file**: `Ctrl/Cmd + F`, `/` or the Search button. `Enter` / `Shift + Enter` go to the next / previous match, `Esc` closes it and `Aa` matches the case.
 - **Line numbers**, a commit counter and a `?` help with all the shortcuts.
 - **Fast**: long histories and big files load in a fraction of the time and the animation stays smooth. Only the commits that are new are processed when more are loaded.
@@ -24,7 +25,8 @@ from the Command Palette, or right-click the file in the editor or in the explor
 | Older / newer commit   | `←` / `→`, swipe, or click a commit at the top                |
 | Previous / next change | `↑` / `↓`, or the ▲ ▼ buttons at the bottom                   |
 | Auto-jump              | Scrolls to the closest change when you switch commit (toggle) |
-| Jump to a change       | Click a green mark on the strip next to the scrollbar         |
+| Jump to a change       | Click a mark on the strip next to the scrollbar               |
+| See removed lines      | Click a red "lines removed" row, or the Removed button        |
 | Search in the file     | `Ctrl/Cmd + F`, `/`, or the Search button                     |
 | Next / previous match  | `Enter` / `Shift + Enter` (yellow marks show all matches)     |
 | Match case             | The `Aa` button in the search box                             |
@@ -49,7 +51,7 @@ npm run package     # creates git-file-history-nav-<version>.vsix
 Then, in VS Code: Extensions → `⋯` → **Install from VSIX…**, or
 
 ```bash
-code --install-extension git-file-history-nav-2.0.1.vsix
+code --install-extension git-file-history-nav-2.1.0.vsix
 ```
 
 To try it without installing: open this folder in VS Code and press **F5**.

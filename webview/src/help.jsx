@@ -59,6 +59,10 @@ export function HelpDialog({ onClose }) {
         <p className="help-note">
           Auto-jump scrolls to the closest change every time you switch commit.
         </p>
+        <p className="help-note">
+          Lines a commit removed are hidden. Click a red “lines removed” row (or
+          the Removed button) to see them.
+        </p>
         <button onClick={onClose}>Close</button>
       </div>
     </div>

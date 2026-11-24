@@ -210,31 +210,98 @@ export function getChanges(lines) {
   return changes;
 }
 
+// A change is a run of lines that were added or removed by this version,
+// without any line that stayed the same in between.
+//   added:   in this version, not in the older one   (!left && middle)
+//   removed: in the older version, not in this one   (left && !middle)
+// Lines that belong only to the newer version (!left && !middle) take no
+// room in this one, so they do not split a change.
 function computeChanges(lines) {
   const changes = [];
-  let currentChange = null;
-  let i = 0;
-  const isNewLine = i => !lines[i].left && lines[i].middle;
-  while (i < lines.length) {
-    if (isNewLine(i)) {
-      if (!currentChange) {
-        currentChange = { start: i };
-      }
-    } else {
-      if (currentChange) {
-        currentChange.end = i - 1;
-        changes.push(currentChange);
-        currentChange = null;
-      }
-    }
-    i++;
-  }
+  let current = null;
 
-  if (currentChange) {
-    currentChange.end = i - 1;
-    changes.push(currentChange);
-    currentChange = null;
+  const close = () => {
+    if (!current) return;
+    current.kind =
+      current.added && current.removed
+        ? "modified"
+        : current.removed
+          ? "removed"
+          : "added";
+    changes.push(current);
+    current = null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const { left, middle } = lines[i];
+    const isAdded = !left && middle;
+    const isRemoved = left && !middle;
+    if (isAdded || isRemoved) {
+      if (!current) {
+        current = { start: i, end: i, added: 0, removed: 0, firstRemoved: -1 };
+      }
+      current.end = i;
+      if (isAdded) {
+        current.added++;
+      } else {
+        current.removed++;
+        if (current.firstRemoved < 0) current.firstRemoved = i;
+      }
+    } else if (left || middle) {
+      close();
+    }
   }
+  close();
 
   return changes;
+}
+
+// Removed lines are in `lines` (the animation needs them) but they take no
+// room once the version is settled. To be able to show them, a header row
+// ("3 lines removed") is put in front of the removed lines of every change
+// that has some. Inside a change the removed lines go first and the added
+// ones after them, like in any diff: what it was, then what it is now.
+// Rows are renumbered, so the changes are returned again with their new
+// positions; `header` is the position of the header (or -1).
+export function addRemovedHeaders(lines, changes) {
+  if (!changes.some(change => change.removed > 0)) {
+    return { lines, changes, headers: [] };
+  }
+
+  const isRemoved = line => line.left && !line.middle;
+  const out = [];
+  const outChanges = [];
+  const headers = [];
+  let pos = 0;
+
+  changes.forEach(change => {
+    for (; pos < change.start; pos++) out.push(lines[pos]);
+    const start = out.length;
+    let header = -1;
+    if (change.removed > 0) {
+      header = out.length;
+      headers.push(header);
+      out.push({
+        key: `removed-${lines[change.firstRemoved].key}`,
+        content: "",
+        tokens: [],
+        left: false,
+        middle: false,
+        right: false,
+        removedHeader: true,
+        count: change.removed
+      });
+      for (let i = change.start; i <= change.end; i++) {
+        if (isRemoved(lines[i])) out.push(lines[i]);
+      }
+    }
+    for (let i = change.start; i <= change.end; i++) {
+      if (!isRemoved(lines[i])) out.push(lines[i]);
+    }
+    pos = change.end + 1;
+    outChanges.push({ ...change, start, end: out.length - 1, header });
+  });
+  for (; pos < lines.length; pos++) out.push(lines[pos]);
+
+  return { lines: out, changes: outChanges, headers };
 }
